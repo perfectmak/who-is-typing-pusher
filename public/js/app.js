@@ -122,7 +122,7 @@ function publishUserTyping(username) {
 
     var typingStream =  messageInputStream
       .filter(function(event){return (event.which !== ENTER_KEY);})
-      .throttleTime(300);
+      .throttleTime(200);
     typingStream.mapTo(currentUsername).subscribe(publishUserTyping);
 
 
