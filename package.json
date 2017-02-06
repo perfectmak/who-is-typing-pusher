@@ -1,0 +1,26 @@
+{
+  "name": "who-is-typing-js",
+  "version": "1.0.0",
+  "description": "This applications shows how to integrate Pusher with a Javascript application to implement a who is typing feature.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/perfectmak/who-is-typing-pusher.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/perfectmak/who-is-typing-pusher/issues"
+  },
+  "homepage": "https://github.com/perfectmak/who-is-typing-pusher#readme",
+  "dependencies": {
+    "body-parser": "^1.16.0",
+    "ejs": "^2.5.5",
+    "express": "^4.14.1",
+    "pusher": "^1.5.1"
+  }
+}
