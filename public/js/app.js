@@ -1,15 +1,14 @@
 'use strict';
 
-(function(window, $, Rx){
+(function(window, $){
 
   var ENTER_KEY = 13;
-  var BACKSPACE_KEY = 8;
 
   /**
    * Generates an anonymous username for a user
    *
    */
-  function generateUsername() {
+  function getCurrentUsername() {
     var usernamePrefixes = ['kitten', 'chiwawa', 'pangolin', 'hippo', 'cheetah', 'slug'];
     var prefixIndex = Math.ceil(Math.random() * 10)% usernamePrefixes.length;
 
@@ -21,11 +20,14 @@
    *
    */
   function handleUserIsTypingEvent(payload) {
-    if(payload === null) {
-      $('#user-is-typing').html('');
-    } else {
-      $('#user-is-typing').html(payload.username + 'is typing...');
-    }
+    $('#user-is-typing').html(payload.username + 'is typing...');
+  }
+
+  /**
+   * Clears the user's typing message
+   */
+  function clearUserIsTyping() {
+    $('#user-is-typing').html('');
   }
 
   /**
@@ -75,17 +77,46 @@ function publishUserTyping(username) {
   }
 
   /**
-   * Creates a pusher Observable Stream
+   * Returns a function that invokes 'timeoutfn' after 'time' milliseconds from the last time
+   * 'fn' was invoked.
    *
-   * @param channel
-   * @param event
-   * @param pusher
-   * @returns {*|Observable}
+   * @param fn
+   * @param timeoutFn
+   * @param timeout
+   * @returns {Function}
    */
-  function createPusherObservable(pusher, channel, event) {
-    var pusherMessageStream = new Rx.Subject();
-    pusher.subscribe(channel).bind(event, pusherMessageStream.next.bind(pusherMessageStream));
-    return pusherMessageStream;
+function convertToTimeoutFn(fn, timeoutFn, timeout) {
+  var timeoutId;
+
+  return function() {
+    fn.apply(null, arguments);
+
+    //reset clear time
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(timeoutFn, timeout);
+  }
+}
+
+  /**
+   * Returns a throttled version of function that ensures 'fn' is called a most once every 'timeout'
+   * milliseconds
+   *
+   * @param fn
+   * @param timeout
+   * @returns {Function}
+   */
+  function throttle(fn, timeout) {
+    var canCall = true;
+    return function() {
+      if(canCall) {
+        fn.apply(null, arguments);
+        canCall = false;
+        setTimeout(function() {
+          canCall = true;
+        }, timeout);
+      }
+
+    }
   }
 
   function initApplication() {
@@ -93,62 +124,45 @@ function publishUserTyping(username) {
     var pusher = new Pusher(PUSHER_KEY, {
       encrypted: true,
     });
-    var chatChannel = 'anonymous_chat';
+    var chatChannelName = 'anonymous_chat';
     var userIsTypingEvent = 'user_typing';
     var newMessageEvent = 'user_message';
-    var currentUsername = generateUsername();
+    var currentUsername = getCurrentUsername();
     $('#username').html(currentUsername);
 
-    function ignoreCurrentUsername(payload) { return payload.username != currentUsername};
+    var channel = pusher.subscribe(chatChannelName);
+    var clearInterval = 900; //0.9 seconds
+    var clearingIsTypingEventHandler = convertToTimeoutFn(handleUserIsTypingEvent,
+                                          clearUserIsTyping, clearInterval);
 
-    var userIsTypingStream = createPusherObservable(pusher, chatChannel, userIsTypingEvent)
-      .filter(ignoreCurrentUsername);
+    channel.bind(userIsTypingEvent, function(data) {
+      if(data.username !== currentUsername) {
+        clearingIsTypingEventHandler(data);
+      }
+    });
 
-    //user is typing clear timer -> emits null
-    var clearInterval = 800; //0.8 seconds
-    var userIsTypingClearTimer = Rx.Observable.timer(clearInterval, clearInterval)
-      .mapTo(null)
-      .takeUntil(userIsTypingStream)
-      .repeat();
-
-    //subscribe to user_typing events
-    userIsTypingStream
-      .merge(userIsTypingClearTimer)
-      .distinctUntilChanged()
-      .subscribe(handleUserIsTypingEvent);
 
     var messageTextField = $('#message-text-field');
-    var messageInputStream = Rx.Observable.fromEvent(messageTextField, 'keyup');
+    var throttleTime = 200; //0.2 seconds
+    var throttledPublishUserTyping = throttle(publishUserTyping, throttleTime);
 
-    var typingStream =  messageInputStream
-      .filter(function(event){return (event.which !== ENTER_KEY);})
-      .throttleTime(200);
-    typingStream.mapTo(currentUsername).subscribe(publishUserTyping);
-
-
+    messageTextField.on('keyup', function(event) {
+      if(event.which !== ENTER_KEY) {
+        throttledPublishUserTyping(currentUsername);
+      }
+    });
 
     //subscribe to new_message events
-    var newUserMessageStream = createPusherObservable(pusher, chatChannel, newMessageEvent);
-    newUserMessageStream.subscribe(handleUserMessageEvent.bind(null, currentUsername));
+    channel.bind(newMessageEvent, handleUserMessageEvent.bind(null, currentUsername));
 
-    // create send button click stream
     var sendButton = $('#send-button');
-    var sendClickStream = Rx.Observable.fromEvent(sendButton, 'click');
-
-    //subscribe to sendClickStream and Enter Key Inputs
-    Rx.Observable.merge(
-      sendClickStream,
-      messageInputStream.filter(function(event) {return event.which === ENTER_KEY;})
-    ).withLatestFrom(messageInputStream.pluck('target', 'value'))
-      .pluck(1)
-      .filter(function(message) { return message != ''})
-      .subscribe(function(message) {
-        publishUserMessage(currentUsername, message)
-          .catch(console.err);
-        messageTextField.val('');
-      });
+    sendButton.on('click', function(event) {
+      var message = messageTextField.val();
+      publishUserMessage(currentUsername, message)
+        .catch(console.err);
+      messageTextField.val('');
+    });
   }
 
-  Rx.Observable.fromEvent($(window), 'DOMContentLoaded')
-    .subscribe(initApplication);
-})(window, $, Rx);
+  $(window).on('DOMContentLoaded', initApplication);
+})(window, $);
