@@ -5,18 +5,17 @@ const bodyParser = require('body-parser');
 const ejs = require('ejs');
 const path = require('path');
 const Pusher = require('pusher');
-const config = require('./config');
 
 const app = express();
 
 //Initialize Pusher
-const pusherConfig = config.pusher;
-const pusher = new Pusher({
-  appId: pusherConfig.appId,
-  key: pusherConfig.key,
-  secret: pusherConfig.secret,
-  encrypted: true,
-});
+const pusherConfig = {
+  appId: '296215',
+  key: 'ba9e3547ed00e955b016',
+  secret: 'fe75123ebd440dbfe1a4',
+  encrypted: true
+};
+const pusher = new Pusher(pusherConfig);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
@@ -38,17 +37,20 @@ const newMessageEvent = 'user_message';
 
 app.post('/userTyping', function(req, res) {
   const username = req.body.username;
-  pusher.trigger(chatChannel, userIsTypingEvent, {username});
+  pusher.trigger(chatChannel, userIsTypingEvent, {username: username});
   res.status(200).send();
 });
 
 app.post('/userMessage', function(req, res) {
   const username = req.body.username;
   const message = req.body.message;
-  pusher.trigger(chatChannel, newMessageEvent, {username, message});
+  pusher.trigger(chatChannel, newMessageEvent, {
+    username: username,
+    message: message
+  });
   res.status(200).send();
 });
 
-app.listen(config.appPort, function () {
+app.listen(3000, function () {
   console.log('Node server running on port 3000');
 });

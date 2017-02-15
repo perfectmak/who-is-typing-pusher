@@ -2,8 +2,6 @@
 
 (function(window, $){
 
-  var ENTER_KEY = 13;
-
   /**
    * Generates an anonymous username for a user
    *
@@ -15,20 +13,6 @@
     return usernamePrefixes[prefixIndex] + '-' + cuid.slug();
   }
 
-  /**
-   * Callback function for the `user_typing` event
-   *
-   */
-  function handleUserIsTypingEvent(payload) {
-    $('#user-is-typing').html(payload.username + 'is typing...');
-  }
-
-  /**
-   * Clears the user's typing message
-   */
-  function clearUserIsTyping() {
-    $('#user-is-typing').html('');
-  }
 
   /**
    * Callback function for the `user_message` event
@@ -76,49 +60,6 @@ function publishUserTyping(username) {
     return $.post('/userMessage', {username: username, message: message}).promise();
   }
 
-  /**
-   * Returns a function that invokes 'timeoutfn' after 'time' milliseconds from the last time
-   * 'fn' was invoked.
-   *
-   * @param fn
-   * @param timeoutFn
-   * @param timeout
-   * @returns {Function}
-   */
-function convertToTimeoutFn(fn, timeoutFn, timeout) {
-  var timeoutId;
-
-  return function() {
-    fn.apply(null, arguments);
-
-    //reset clear time
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(timeoutFn, timeout);
-  }
-}
-
-  /**
-   * Returns a throttled version of function that ensures 'fn' is called a most once every 'timeout'
-   * milliseconds
-   *
-   * @param fn
-   * @param timeout
-   * @returns {Function}
-   */
-  function throttle(fn, timeout) {
-    var canCall = true;
-    return function() {
-      if(canCall) {
-        fn.apply(null, arguments);
-        canCall = false;
-        setTimeout(function() {
-          canCall = true;
-        }, timeout);
-      }
-
-    }
-  }
-
   function initApplication() {
 
     var pusher = new Pusher(PUSHER_KEY, {
@@ -132,23 +73,32 @@ function convertToTimeoutFn(fn, timeoutFn, timeout) {
 
     var channel = pusher.subscribe(chatChannelName);
     var clearInterval = 900; //0.9 seconds
-    var clearingIsTypingEventHandler = convertToTimeoutFn(handleUserIsTypingEvent,
-                                          clearUserIsTyping, clearInterval);
-
+    var clearTimerId;
     channel.bind(userIsTypingEvent, function(data) {
       if(data.username !== currentUsername) {
-        clearingIsTypingEventHandler(data);
+        $('#user-is-typing').html(data.username + 'is typing...');
+
+        clearTimeout(clearTimerId);
+        clearTimerId = setTimeout(function () {
+          $('#user-is-typing').html('');
+        }, clearInterval);
       }
     });
 
 
     var messageTextField = $('#message-text-field');
+    var canPublish = true;
     var throttleTime = 200; //0.2 seconds
-    var throttledPublishUserTyping = throttle(publishUserTyping, throttleTime);
 
     messageTextField.on('keyup', function(event) {
-      if(event.which !== ENTER_KEY) {
-        throttledPublishUserTyping(currentUsername);
+      if(canPublish) {
+        publishUserTyping(currentUsername)
+          .catch(console.error);
+
+        canPublish = false;
+        setTimeout(function() {
+          canPublish = true;
+        }, throttleTime);
       }
     });
 
@@ -158,9 +108,16 @@ function convertToTimeoutFn(fn, timeoutFn, timeout) {
     var sendButton = $('#send-button');
     sendButton.on('click', function(event) {
       var message = messageTextField.val();
+      sendButton.attr('disabled', true);
       publishUserMessage(currentUsername, message)
-        .catch(console.err);
-      messageTextField.val('');
+        .then(function() {
+          messageTextField.val('');
+          sendButton.attr('disabled', false);
+        })
+        .catch(function() {
+          console.error.apply(console, arguments);
+          sendButton.attr('disabled', true);
+        });
     });
   }
 
