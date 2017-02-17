@@ -10,9 +10,9 @@ const app = express();
 
 //Initialize Pusher
 const pusherConfig = {
-  appId: '296215',
-  key: 'ba9e3547ed00e955b016',
-  secret: 'fe75123ebd440dbfe1a4',
+  appId: 'YOUR_PUSHER_APP_ID',
+  key: 'YOUR_PUSHER_KEY',
+  secret: 'YOUR_PUSHER_SECRET',
   encrypted: true
 };
 const pusher = new Pusher(pusherConfig);
