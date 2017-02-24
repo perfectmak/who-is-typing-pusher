@@ -1,5 +1,5 @@
 # Who is typing feature with Pusher
-This applications shows how to integrate Pusher with a Javascript application to implement a who is typing feature.
+This application shows how to integrate Pusher with a JavaScript application to implement a who is typing feature.
 
 # Requirements
 
