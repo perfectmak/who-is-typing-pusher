@@ -22,7 +22,6 @@ body {
     max-width: 800px;
     height: 500px;
     border-radius: 10px;
-    background-color: #fff;
     left: 50%;
     top: 50%;
     transform: translateX(-50%) translateY(-50%);
@@ -156,7 +155,6 @@ body {
 }
 
 .bottom_wrapper {
-    position: relative;
     width: 100%;
     background-color: #fff;
     padding: 20px 20px;

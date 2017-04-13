@@ -27,7 +27,7 @@
     //build message
     var messageTemplate = $($('.message_template').clone().html());
     messageTemplate.addClass(messageClass);
-    messageTemplate.find('.text').html(payload.message)
+    messageTemplate.find('.text').html(payload.message);
     messageTemplate.find('.who > em').html(payload.username);
 
     //append to existing messages
