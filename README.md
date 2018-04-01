@@ -13,7 +13,7 @@ To get this project up and running on your local machine for development and tes
 6. Go to `http://localhost:3000` and start playing with the app. You can open multiple tabs and type on each tab to know who is typing.
 
 ### Prerequisites
-In order to run this application successful on your local machine, you need to have Node.js installed.
+In order to run this application successfully on your local machine, you need to have Node.js installed.
 Head over to [https://nodejs.org/en/download/](https://nodejs.org/en/download/) to download and install Node.js for your version of operating system.
 
 ## Built With
